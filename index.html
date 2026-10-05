@@ -1,0 +1,1933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waypoints — Travel Log</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1E8F86">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Poppins:wght@400;500;600;700&family=Space+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F2E6C9;
+    --cream-2:#EADFB8;
+    --turquoise:#1E8F86;
+    --turquoise-dark:#136158;
+    --header-blue:#2C5C64;
+    --coral:#E8604C;
+    --mustard:#E8A33D;
+    --ink:#2B2620;
+    --chrome:#C9C2AE;
+    --line: rgba(43,38,32,0.16);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--cream);
+    background-image:
+      repeating-linear-gradient(45deg, rgba(43,38,32,0.025) 0px, rgba(43,38,32,0.025) 1px, transparent 1px, transparent 14px);
+    color:var(--ink);
+    font-family:'Poppins', sans-serif;
+    min-height:100vh;
+  }
+  ::selection{ background: var(--mustard); color:var(--ink); }
+
+  .wrap{ max-width:1000px; margin:0 auto; padding:24px 18px 80px; }
+
+  /* Header */
+  header.hero{
+    display:flex;
+    justify-content:center;
+    margin-bottom:8px;
+  }
+  .hero-image{ display:block; width:100%; max-width:520px; height:auto; }
+  .hero-sr-only{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  .hero-stats{
+    display:flex; gap:14px; flex-wrap:wrap; margin: 18px 0 22px; justify-content:center;
+  }
+  .hero-stats div{
+    font-family:'Space Mono', monospace;
+    font-size:11px; color:var(--ink); background:#FFFDF6;
+    border:2px solid var(--ink); border-radius:6px; padding:8px 14px;
+    box-shadow: 3px 3px 0 var(--chrome);
+  }
+  .hero-stats b{ display:block; font-size:22px; color:var(--coral); font-family:'Alfa Slab One',serif; font-weight:400; }
+
+  /* Trip bar */
+  .trip-bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .traveler-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+  .traveler-chip{
+    font-family:'Space Mono',monospace; font-size:10.5px; font-weight:700;
+    background:var(--cream-2); border:1.5px solid var(--ink); border-radius:999px;
+    padding:4px 10px; display:inline-flex; align-items:center; gap:6px;
+  }
+  .traveler-chip button{ background:none; border:none; cursor:pointer; color:var(--coral); font-weight:700; padding:0; font-size:11px; }
+  .traveler-checklist{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+  .traveler-check-row{
+    display:flex; align-items:center; gap:8px; font-family:'Poppins',sans-serif; font-size:13.5px;
+  }
+  .traveler-check-row input[type=checkbox]{ width:18px; height:18px; accent-color:var(--turquoise); }
+
+  /* Controls */
+  .controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px; }
+  .tabs{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tab{
+    font-family:'Space Mono', monospace;
+    font-size:11px; letter-spacing:.03em; text-transform:uppercase; font-weight:700;
+    padding:7px 13px; border-radius:999px;
+    border:2px solid var(--ink); background:var(--cream); cursor:pointer;
+    color:var(--ink);
+  }
+  .tab.active{ background:var(--coral); border-color:var(--ink); color:var(--cream); }
+  .spacer{ flex:1; }
+  .add-btn{
+    font-family:'Space Mono', monospace;
+    font-size:12px; letter-spacing:.03em; font-weight:700;
+    background:var(--coral); color:var(--cream); border:2px solid var(--ink);
+    padding:10px 18px; border-radius:999px; cursor:pointer;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .add-btn:active{ box-shadow:1px 1px 0 var(--ink); transform:translate(2px,2px); }
+  .btn-secondary.btn-pill{ border-radius:999px; padding:9px 18px; }
+  .btn-secondary.btn-travelers{ background:var(--mustard); color:var(--ink); }
+
+  /* Grid */
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px; }
+
+  .card{
+    background:#FFFDF6;
+    border:2.5px solid var(--ink);
+    border-radius:10px;
+    overflow:hidden;
+    position:relative;
+    display:flex; flex-direction:column;
+    box-shadow: 4px 4px 0 var(--chrome);
+    cursor:pointer;
+    transition: transform 0.08s ease;
+  }
+  .card:hover{ transform:translate(-1px,-1px); box-shadow: 5px 5px 0 var(--chrome); }
+  .card:active{ transform:translate(1px,1px); box-shadow: 3px 3px 0 var(--chrome); }
+  .card .photo{
+    height:130px; background:var(--cream-2) center/cover no-repeat;
+    display:flex; align-items:center; justify-content:center;
+    color:#8a7d55; font-family:'Space Mono',monospace; font-size:11px;
+    border-bottom:2.5px solid var(--ink);
+  }
+  .card-body{ padding:14px 14px 12px; display:flex; flex-direction:column; gap:8px; flex:1;}
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .card-title{ font-family:'Alfa Slab One', serif; font-weight:400; font-size:17px; line-height:1.2; color:var(--header-blue); }
+  .cat-pill{
+    font-family:'Space Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:700;
+    padding:3px 9px; border-radius:999px; background:var(--mustard); color:var(--ink); white-space:nowrap;
+    border:1.5px solid var(--ink);
+  }
+  .price-pill{ background:#CDE8CE; color:#1f5c27; }
+  .addr{ font-size:12.5px; color:#6b5f42; font-weight:500; }
+  .notes{ font-size:12.5px; color:#4A473F; line-height:1.4; }
+  .status-row{ display:flex; justify-content:space-between; align-items:center; margin-top:auto; padding-top:6px; }
+  .status-badge{
+    font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.04em; font-weight:700;
+    padding:4px 9px; border-radius:4px; border:1.5px solid var(--ink);
+  }
+  .status-visited{ background:#CDE8CE; color:#1f5c27; }
+  .status-want{ background:#F7D9C4; color:var(--coral); }
+  .stars{ font-size:14px; letter-spacing:1px; color:var(--mustard); }
+  .stars .empty{ color:var(--line); }
+  .card-actions{ display:flex; gap:6px; }
+  .icon-btn{
+    background:none; border:none; cursor:pointer; color:#8a7d55; font-size:14px;
+    padding:2px 4px;
+  }
+  .icon-btn:hover{ color:var(--coral); }
+  .link-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .place-link{ color:var(--turquoise-dark); font-weight:600; font-size:12.5px; text-decoration:none; }
+  .place-link:hover{ text-decoration:underline; }
+  .weather-chip{
+    font-family:'Space Mono',monospace; font-size:11px; font-weight:700;
+    background:var(--cream-2); border:1.5px solid var(--ink); border-radius:999px;
+    padding:3px 9px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
+    color:var(--ink);
+  }
+
+  .empty-state{
+    text-align:center; padding:60px 20px; color:#8a7d55;
+    font-family:'Space Mono',monospace; font-size:13px;
+  }
+  .city-select{
+    font-family:'Space Mono', monospace;
+    font-size:11px; letter-spacing:.03em; font-weight:700;
+    padding:8px 26px 8px 10px; border-radius:6px;
+    border:2px solid var(--ink); background-color:var(--cream); color:var(--ink); cursor:pointer;
+    box-shadow: 3px 3px 0 var(--ink);
+    -webkit-appearance:none; -moz-appearance:none; appearance:none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%232B2620'/></svg>");
+    background-repeat:no-repeat;
+    background-position: right 10px center;
+    background-size:10px 6px;
+  }
+  .select-trip{ background-color:var(--turquoise); border-color:var(--ink); color:var(--cream);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%23F2E6C9'/></svg>"); }
+  .select-category{ background-color:var(--coral); border-color:var(--ink); color:var(--cream);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%23F2E6C9'/></svg>"); }
+  .select-status{ background-color:var(--mustard); border-color:var(--ink); color:var(--ink); }
+  .select-city{ background-color:var(--turquoise); border-color:var(--ink); color:var(--cream);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%23F2E6C9'/></svg>"); }
+
+  /* City header — postcard banner style */
+  .city-group{ margin-bottom:30px; }
+  .city-heading{
+    display:inline-flex; flex-direction:column; align-items:flex-start; gap:4px;
+    padding:9px 22px;
+    border-radius:6px 6px 0 0;
+    border:2.5px solid var(--ink);
+    border-bottom:none;
+    position:relative;
+  }
+  .city-meta{ display:flex; align-items:center; gap:8px; }
+  .city-map-btn{
+    font-family:'Space Mono',monospace; font-size:11px; font-weight:700;
+    background:#FFFDF6; border:1.5px solid var(--ink); border-radius:999px;
+    padding:3px 10px; cursor:pointer; color:var(--ink);
+  }
+  .city-map-box{
+    width:100%; height:420px; border:2.5px solid var(--ink); border-radius:8px;
+    overflow:hidden; background:var(--cream-2); margin-top:6px;
+  }
+  .city-heading h3{
+    font-family:'Alfa Slab One', serif; font-weight:400; font-size:22px; margin:0;
+    letter-spacing:0.01em;
+  }
+  .city-count{
+    font-family:'Space Mono',monospace; font-size:10.5px; font-weight:700; opacity:0.85;
+  }
+  .city-scallop{
+    height:11px;
+    border-left:2.5px solid var(--ink);
+    border-right:2.5px solid var(--ink);
+    border-bottom:2.5px solid var(--ink);
+    margin-bottom:16px;
+    -webkit-mask-image: radial-gradient(circle at 7px 0, transparent 7px, black 7.5px);
+    mask-image: radial-gradient(circle at 7px 0, transparent 7px, black 7.5px);
+    -webkit-mask-size: 14px 11px;
+    mask-size: 14px 11px;
+    -webkit-mask-repeat: repeat-x;
+    mask-repeat: repeat-x;
+    mask-position: 4px 0;
+    -webkit-mask-position: 4px 0;
+  }
+  .band-turquoise{ background:var(--turquoise); color:var(--cream); }
+  .band-coral{ background:var(--coral); color:var(--cream); }
+  .band-mustard{ background:var(--mustard); color:var(--ink); }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(19,97,88,0.45);
+    display:none; align-items:center; justify-content:center; padding:20px; z-index:50;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background:var(--cream); border:3px solid var(--ink); border-radius:10px;
+    width:100%; max-width:460px; max-height:88vh; overflow-y:auto;
+    padding:22px 22px 20px;
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+  .modal h2{ font-family:'Alfa Slab One',serif; font-weight:400; font-size:26px; margin:0 0 14px; color:var(--turquoise-dark); }
+  label{ font-family:'Space Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; color:#4A473F; display:block; margin:12px 0 5px; }
+  input[type=text], input[type=url], textarea, select{
+    width:100%; padding:9px 10px; border:2px solid var(--ink); border-radius:6px;
+    background:#FFFDF6; font-family:'Poppins',sans-serif; font-size:13.5px; color:var(--ink);
+  }
+  textarea{ resize:vertical; min-height:56px; }
+  .rating-input{ display:flex; gap:4px; margin-top:2px; }
+  .rating-star{
+    position:relative; display:inline-block; width:28px; height:26px;
+    font-size:26px; line-height:1; cursor:pointer;
+  }
+  .rating-star-bg{ position:absolute; top:0; left:0; color:var(--line); }
+  .rating-star-fill{
+    position:absolute; top:0; left:0; overflow:hidden; white-space:nowrap; color:var(--mustard);
+  }
+  .status-toggle{ display:flex; gap:8px; margin-top:2px; }
+  .price-input{ display:flex; gap:6px; margin-top:2px; }
+  .price-input button{
+    flex:1; padding:9px; border-radius:6px; border:2px solid var(--ink); background:#FFFDF6; cursor:pointer;
+    font-family:'Space Mono',monospace; font-size:15px; font-weight:700; color:var(--line);
+  }
+  .price-input button.selected{ background:var(--turquoise); color:var(--cream); border-color:var(--ink); }
+  .status-toggle button{
+    flex:1; padding:9px; border-radius:6px; border:2px solid var(--ink); background:#FFFDF6; cursor:pointer;
+    font-family:'Space Mono',monospace; font-size:11px; text-transform:uppercase; font-weight:700;
+  }
+  .status-toggle button.selected{ background:var(--turquoise); color:var(--cream); border-color:var(--ink); }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:20px; flex-wrap:wrap; }
+  .btn-secondary{
+    background:var(--cream); border:2px solid var(--ink); color:var(--ink); padding:9px 14px; border-radius:6px;
+    cursor:pointer; font-family:'Space Mono',monospace; font-size:11.5px; font-weight:700;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .btn-secondary:active{ box-shadow:1px 1px 0 var(--ink); transform:translate(2px,2px); }
+  .btn-primary{
+    background:var(--coral); border:2px solid var(--ink); color:var(--cream); padding:9px 16px; border-radius:6px;
+    cursor:pointer; font-family:'Space Mono',monospace; font-size:11.5px; font-weight:700;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .field-hint{ font-size:11px; color:#8a7d55; margin-top:3px; }
+  .place-search-results{ margin-top:8px; display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; }
+  .place-search-result{
+    text-align:left; padding:8px 10px; border:1.5px solid var(--ink); border-radius:6px; background:#FFFDF6;
+    cursor:pointer; font-family:'Poppins',sans-serif; font-size:12.5px; color:var(--ink);
+  }
+  .place-search-result:hover{ background:var(--cream-2); }
+  .place-search-result b{ display:block; font-family:'Space Mono',monospace; font-size:12px; font-weight:700; margin-bottom:2px; }
+  .loading{ text-align:center; padding:40px; font-family:'Space Mono',monospace; font-size:12px; color:#8a7d55; }
+  .banner{
+    font-family:'Space Mono',monospace; font-size:12px; font-weight:700;
+    padding:10px 14px; border-radius:6px; margin-bottom:14px; border:2px solid var(--ink);
+  }
+  .banner.error{ background:#F7D9C4; color:var(--coral); }
+  .banner.saving{ background:var(--cream-2); color:#4A473F; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <img class="hero-image" src="header.png" alt="Waypoints — Shared Log, Est. 2026. Places we've found, places we're chasing. One list, every traveler.">
+    <h1 class="hero-sr-only">Waypoints</h1>
+    <div class="hero-sr-only">Shared Log · Est. 2026. Places we've found, places we're chasing. One list, every traveler.</div>
+  </header>
+
+  <div class="hero-stats">
+    <div><b id="stat-total">0</b>logged</div>
+    <div><b id="stat-visited">0</b>visited</div>
+    <div><b id="stat-want">0</b>want to go</div>
+  </div>
+
+  <div class="trip-bar">
+    <select class="city-select select-trip" id="trip-tabs" onchange="handleTripSelectChange(this.value)"></select>
+    <button class="btn-secondary" id="manage-trip-btn" onclick="openTripModal(getCurrentTrip())">✎ Manage trip</button>
+  </div>
+
+  <div class="controls">
+    <select class="city-select select-category" id="cat-tabs" onchange="setCategory(this.value)"></select>
+    <select class="city-select select-status" id="status-tabs" onchange="setStatusFilter(this.value)"></select>
+    <select class="city-select select-city" id="city-select" onchange="setCityFilter(this.value)">
+      <option value="All">All cities</option>
+    </select>
+    <button class="add-btn" onclick="addPlaceClicked()">+ Add place</button>
+    <button class="btn-secondary btn-pill" onclick="openDataModal()" title="Export or import your data">⇅ Export / Import</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+
+  <div id="save-banner" style="display:none;"></div>
+
+  <div id="content">
+    <div class="loading">loading your list…</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modal-title">Add a place</h2>
+    <input type="hidden" id="edit-id">
+
+    <label>Search for a place <span class="field-hint" style="text-transform:none">(optional — look up a real place and auto-fill below)</span></label>
+    <div style="display:flex; gap:6px;">
+      <input type="text" id="place-search-input" placeholder="e.g. Eiffel Tower, or a business name + city" onkeydown="if(event.key==='Enter'){event.preventDefault(); searchForPlace();}">
+      <button type="button" class="btn-secondary" onclick="searchForPlace()">Search</button>
+    </div>
+    <div id="place-search-results"></div>
+
+    <label>Name</label>
+    <input type="text" id="f-name" placeholder="e.g. Sunset Noodle Bar">
+
+    <label>Trip</label>
+    <select id="f-trip"></select>
+
+    <label>Recommended by <span class="field-hint" style="text-transform:none">(optional — who told you about it)</span></label>
+    <input type="text" id="f-recommended" placeholder="e.g. Sarah, a podcast, a blog…">
+
+    <label>Category</label>
+    <select id="f-category" onchange="toggleCategoryDetail()">
+      <option value="Restaurant">Restaurant</option>
+      <option value="Coffee Shop">Coffee Shop</option>
+      <option value="Hotel">Hotel</option>
+      <option value="Attraction">Attraction / Sight</option>
+      <option value="Other">Other</option>
+    </select>
+    <input type="text" id="f-category-other" style="margin-top:8px; display:none;">
+
+    <label>Price <span class="field-hint" style="text-transform:none">(optional)</span></label>
+    <div class="price-input" id="price-input"></div>
+
+    <label>City</label>
+    <input type="text" id="f-city" placeholder="e.g. Lisbon">
+
+    <label>Address <span class="field-hint" style="text-transform:none">(optional)</span></label>
+    <input type="text" id="f-address" placeholder="Street, neighborhood…">
+
+    <label>Phone number <span class="field-hint" style="text-transform:none">(optional)</span></label>
+    <input type="text" id="f-phone" placeholder="e.g. (555) 123-4567">
+
+    <label>Status</label>
+    <div class="status-toggle">
+      <button type="button" id="btn-want" onclick="setStatus('want')">Want to go</button>
+      <button type="button" id="btn-visited" onclick="setStatus('visited')">Visited</button>
+    </div>
+
+    <label>Rating <span class="field-hint" style="text-transform:none">(if visited)</span></label>
+    <div class="rating-input" id="rating-input"></div>
+
+    <label>Notes</label>
+    <textarea id="f-notes" placeholder="What to order, why it's on the list, tips for next time…"></textarea>
+
+    <label>Photo</label>
+    <input type="file" id="f-photo-file" accept="image/*" style="display:none" onchange="handlePhotoFileChange(event)">
+    <div id="photo-preview-row"></div>
+    <button type="button" class="btn-secondary" onclick="document.getElementById('f-photo-file').click()">📷 Choose from device</button>
+    <div class="field-hint" style="text-transform:none; margin-top:6px;">Photos stay on your device and appear on the shareable card.</div>
+
+    <label>Website URL <span class="field-hint" style="text-transform:none">(optional — the place's site or a maps link)</span></label>
+    <input type="url" id="f-website" placeholder="https://…">
+
+    <label>Social media URL <span class="field-hint" style="text-transform:none">(optional — Instagram, Facebook, etc.)</span></label>
+    <input type="url" id="f-social" placeholder="https://…">
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="savePlace()">Save place</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="trip-overlay">
+  <div class="modal">
+    <h2 id="trip-modal-title">New trip</h2>
+    <input type="hidden" id="trip-edit-id">
+
+    <label>Trip name</label>
+    <input type="text" id="trip-name" placeholder="e.g. Italy 2026">
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeTripModal()">Cancel</button>
+      <button class="btn-secondary" id="delete-trip-btn" onclick="deleteCurrentTrip()" style="display:none;">Delete trip</button>
+      <button class="btn-primary" onclick="saveTrip()">Save trip</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="confirm-overlay">
+  <div class="modal" style="max-width:380px;">
+    <p id="confirm-message" style="font-family:'Poppins',sans-serif; font-size:14.5px; line-height:1.5; margin:4px 0 20px; color:var(--ink);"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="resolveConfirm(false)">Cancel</button>
+      <button class="btn-primary" onclick="resolveConfirm(true)">Yes, continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="data-overlay">
+  <div class="modal" style="max-width:360px;">
+    <h2>Export / Import</h2>
+    <div class="field-hint" style="text-transform:none; margin-bottom:16px;">Save a backup file, or load one back in.</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn-secondary btn-pill" style="width:100%;" onclick="exportData(); closeDataModal();">⬇ Export — download a backup file</button>
+      <button class="btn-secondary btn-pill" style="width:100%;" onclick="closeDataModal(); document.getElementById('import-file').click();">⬆ Import — load a backup file</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeDataModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="city-map-overlay">
+  <div class="modal" style="max-width:640px;">
+    <h2 id="city-map-title">City Map</h2>
+    <div id="city-map-status" class="field-hint" style="text-transform:none; margin-bottom:4px;"></div>
+    <div class="city-map-box" id="city-map-container"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeCityMapModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let places = [];
+let trips = [];
+
+let currentTripId = null;
+let currentCategory = 'All';
+let currentStatusFilter = 'All';
+let currentCityFilter = 'All';
+let currentStatus = 'want';
+let currentRating = 0;
+let currentPrice = 0;
+
+
+const CATEGORIES = ['All','Restaurant','Coffee Shop','Hotel','Attraction','Other'];
+const STATUS_FILTERS = ['All','Want to go','Visited'];
+const BANDS = ['band-turquoise','band-coral','band-mustard'];
+const ALL_TRIPS_ID = '__all__';
+
+let pendingPhoto = null;   // a photo chosen in the open form but not saved yet
+let photoRemoved = false;  // the open form's photo was removed
+
+/* ---------- Storage ----------
+   Everything the app saves or loads goes through `store`. Here it's backed by
+   IndexedDB on this device. The packaged iOS app will swap in a native,
+   iCloud-synced implementation with the same methods; nothing else changes. */
+const store = (function(){
+  const DB_NAME = 'waypoints', DB_VERSION = 1;
+  let db = null;
+
+  const reqP = (r) => new Promise((resolve, reject)=>{ r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
+  const txDone = (t) => new Promise((resolve, reject)=>{
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error);
+    t.onabort = () => reject(t.error || new Error('Storage transaction aborted'));
+  });
+
+  function openDB(){
+    return new Promise((resolve, reject)=>{
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const d = req.result;
+        ['trips', 'places', 'photos'].forEach(name => {
+          if(!d.objectStoreNames.contains(name)) d.createObjectStore(name, { keyPath: 'id' });
+        });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => reject(new Error('Storage is blocked by another open tab'));
+    });
+  }
+  function getAll(name){
+    const t = db.transaction(name, 'readonly');
+    return reqP(t.objectStore(name).getAll());
+  }
+  async function put(name, value){
+    const t = db.transaction(name, 'readwrite');
+    t.objectStore(name).put(value);
+    await txDone(t);
+  }
+  async function remove(name, id){
+    const t = db.transaction(name, 'readwrite');
+    t.objectStore(name).delete(id);
+    await txDone(t);
+  }
+
+  return {
+    async init(){
+      db = await openDB();
+      // Ask the browser not to evict our data under storage pressure (best effort).
+      try{ if(navigator.storage && navigator.storage.persist) await navigator.storage.persist(); }catch(e){ /* not supported */ }
+    },
+    getTrips: () => getAll('trips'),
+    getPlaces: () => getAll('places'),
+    getPhotos: () => getAll('photos'),
+    putTrip: (trip) => put('trips', trip),
+    deleteTrip: (id) => remove('trips', id),
+    putPlace: (place) => put('places', place),
+    async deletePlace(id){
+      const t = db.transaction(['places', 'photos'], 'readwrite');
+      t.objectStore('places').delete(id);
+      t.objectStore('photos').delete(id);
+      await txDone(t);
+    },
+    async putPhoto(id, blob){
+      const data = await blobToArrayBuffer(blob);
+      await put('photos', { id, type: blob.type || 'image/jpeg', data });
+    },
+    deletePhoto: (id) => remove('photos', id),
+    async putMany(items){   // items: [{ store, value }]
+      if(!items.length) return;
+      const names = [...new Set(items.map(i => i.store))];
+      const t = db.transaction(names, 'readwrite');
+      items.forEach(i => t.objectStore(i.store).put(i.value));
+      await txDone(t);
+    }
+  };
+})();
+
+function storageError(e){
+  console.error('Storage error', e);
+  showBanner('error', "Couldn't save on this device. Check that it has free storage, then try again.");
+}
+
+function blobToArrayBuffer(blob){
+  if(blob.arrayBuffer) return blob.arrayBuffer();
+  return new Promise((resolve, reject)=>{
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsArrayBuffer(blob);
+  });
+}
+
+/* ---------- Photos ----------
+   Photos picked from the device are stored as binary data in their own store,
+   separate from the place record, so a place stays small and a future iCloud
+   sync can treat photos as files. `photoURLs` holds a viewable URL for each. */
+const photoURLs = {};
+function photoSrc(p){ return photoURLs[p.id] || p.photoUrl || ''; }
+function setPhotoURL(id, blob){
+  if(photoURLs[id]) URL.revokeObjectURL(photoURLs[id]);
+  photoURLs[id] = URL.createObjectURL(blob);
+}
+function clearPhotoURL(id){
+  if(photoURLs[id]){ URL.revokeObjectURL(photoURLs[id]); delete photoURLs[id]; }
+}
+async function loadAllPhotos(){
+  const recs = await store.getPhotos();
+  recs.forEach(r => setPhotoURL(r.id, new Blob([r.data], { type: r.type || 'image/jpeg' })));
+}
+async function savePhotoFor(id, blob){
+  await store.putPhoto(id, blob);
+  setPhotoURL(id, blob);
+}
+function bufferToDataUrl(type, buf){
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  const chunk = 0x8000;
+  for(let i = 0; i < bytes.length; i += chunk){
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return 'data:' + type + ';base64,' + btoa(bin);
+}
+function dataUrlToBlob(dataUrl){
+  const comma = dataUrl.indexOf(',');
+  const head = dataUrl.slice(0, comma);
+  const type = (head.match(/^data:([^;]+)/) || [])[1] || 'image/jpeg';
+  const bin = atob(dataUrl.slice(comma + 1));
+  const bytes = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type });
+}
+
+
+function loadScript(src){
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Failed to load ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+function loadStylesheet(href){
+  return new Promise((resolve, reject)=>{
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.onload = resolve;
+    link.onerror = () => reject(new Error('Failed to load ' + href));
+    document.head.appendChild(link);
+  });
+}
+
+let leafletReadyPromise = null;
+async function ensureLeaflet(){
+  if(window.L) return window.L;
+  if(!leafletReadyPromise){
+    leafletReadyPromise = (async ()=>{
+      await loadStylesheet('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js');
+      return window.L;
+    })();
+  }
+  return leafletReadyPromise;
+}
+
+/* ---------- Geocoding (dual-mode, same pattern as weather) ---------- */
+
+const geoCache = {};
+
+async function geocodeViaNominatim(loc){
+  try{
+    const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(loc));
+    const data = await res.json();
+    if(!data || !data.length) return null;
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  }catch(e){
+    console.error('Geocode (Nominatim) failed for', loc, e);
+    return null;
+  }
+}
+
+
+function geocodeLocation(loc){
+  const key = loc.toLowerCase();
+  if(geoCache[key]) return geoCache[key];
+  // TODO(native): the packaged app will use Apple's geocoder (MapKit). Nominatim's
+  // public service is fine for personal testing but not for a shipped app.
+  const promise = geocodeViaNominatim(loc);
+  geoCache[key] = promise;
+  return promise;
+}
+
+/* ---------- Place search (look up a real place to auto-fill the form) ---------- */
+
+function cleanCityName(city){
+  if(!city) return '';
+  return city
+    .split(',')[0]
+    .replace(/\s+\d{5}(-\d{4})?$/, '')
+    .replace(/\s+[A-Z]{2}$/, '')
+    .trim();
+}
+
+async function searchPlaceViaNominatim(query){
+  const res = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&namedetails=1&limit=6&q=' + encodeURIComponent(query));
+  const data = await res.json();
+  return (data || []).map(item=>{
+    const a = item.address || {};
+    const street = [a.house_number, a.road].filter(Boolean).join(' ');
+    const city = a.city || a.town || a.village || a.hamlet || a.suburb || '';
+    const name = (item.namedetails && item.namedetails.name) || a.amenity || a.shop || a.tourism || a.leisure || (item.display_name||'').split(',')[0];
+    return { name, address: street, city };
+  });
+}
+
+
+let placeSearchResults = [];
+
+async function searchForPlace(){
+  const query = document.getElementById('place-search-input').value.trim();
+  const resultsEl = document.getElementById('place-search-results');
+  if(!query){ resultsEl.innerHTML = ''; return; }
+  resultsEl.innerHTML = `<div class="field-hint" style="text-transform:none;">Searching…</div>`;
+  try{
+    placeSearchResults = await searchPlaceViaNominatim(query);
+    renderPlaceSearchResults();
+  }catch(e){
+    console.error('Place search failed', e);
+    resultsEl.innerHTML = `<div class="field-hint" style="text-transform:none;">Search failed — try again, or just fill in the fields manually.</div>`;
+  }
+}
+
+function renderPlaceSearchResults(){
+  const el = document.getElementById('place-search-results');
+  if(!placeSearchResults.length){
+    el.innerHTML = `<div class="field-hint" style="text-transform:none;">No matches found — try a different search, or fill in the fields manually.</div>`;
+    return;
+  }
+  el.innerHTML = placeSearchResults.map((r,i)=>{
+    const sub = [r.address, cleanCityName(r.city)].filter(Boolean).join(', ');
+    return `<button type="button" class="place-search-result" onclick="selectPlaceSearchResult(${i})">
+      <b>${escapeHtml(r.name || 'Unnamed place')}</b>${sub ? escapeHtml(sub) : ''}
+    </button>`;
+  }).join('');
+}
+
+function selectPlaceSearchResult(i){
+  const r = placeSearchResults[i];
+  if(!r) return;
+  if(r.name) document.getElementById('f-name').value = r.name;
+  if(r.address) document.getElementById('f-address').value = r.address;
+  const city = cleanCityName(r.city);
+  if(city) document.getElementById('f-city').value = city;
+  document.getElementById('place-search-results').innerHTML = '';
+  document.getElementById('place-search-input').value = '';
+}
+
+/* ---------- City map modal ---------- */
+
+let cityMapInstance = null;
+
+async function openCityMap(city){
+  if(cityMapInstance){ cityMapInstance.remove(); cityMapInstance = null; }
+  document.getElementById('city-map-title').textContent = city;
+  document.getElementById('city-map-status').textContent = 'Loading map…';
+  document.getElementById('city-map-container').innerHTML = '';
+  document.getElementById('city-map-overlay').classList.add('open');
+
+  const cityPlaces = places.filter(p =>
+    (p.city||'').trim() === city &&
+    (currentTripId===ALL_TRIPS_ID || (p.tripId||'')===currentTripId)
+  );
+
+  if(!cityPlaces.length){
+    document.getElementById('city-map-status').textContent = 'No places found for this city.';
+    return;
+  }
+
+  try{
+    const L = await ensureLeaflet();
+    const map = L.map('city-map-container');
+    cityMapInstance = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    document.getElementById('city-map-status').textContent = 'Locating places…';
+
+    const results = await Promise.all(cityPlaces.map(async p=>{
+      const loc = locationQuery(p) || city;
+      const coords = await geocodeLocation(loc);
+      return coords ? { p, coords } : null;
+    }));
+    const located = results.filter(Boolean);
+
+    if(!located.length){
+      document.getElementById('city-map-status').textContent = "Couldn't locate any of these places on the map.";
+      map.setView([20,0], 2);
+      return;
+    }
+
+    const markers = located.map(({p, coords})=>{
+      const marker = L.marker([coords.lat, coords.lon]).addTo(map);
+      const ratingText = (p.status==='visited' && p.rating) ? ` · ${p.rating}/5` : '';
+      marker.bindPopup(`<strong>${escapeHtml(p.name)}</strong><br>${escapeHtml(categoryLabel(p))}${ratingText}`);
+      return marker;
+    });
+
+    if(markers.length === 1){
+      map.setView(markers[0].getLatLng(), 14);
+    } else {
+      const group = L.featureGroup(markers);
+      map.fitBounds(group.getBounds().pad(0.2));
+    }
+
+    const missing = cityPlaces.length - located.length;
+    document.getElementById('city-map-status').textContent =
+      missing > 0 ? `Showing ${located.length} of ${cityPlaces.length} places (${missing} couldn't be located).` : `Showing all ${located.length} places.`;
+  }catch(e){
+    console.error('City map error', e);
+    document.getElementById('city-map-status').textContent = 'Could not load the map right now.';
+  }
+}
+
+function closeCityMapModal(){
+  document.getElementById('city-map-overlay').classList.remove('open');
+  if(cityMapInstance){ cityMapInstance.remove(); cityMapInstance = null; }
+}
+
+
+let _confirmResolve = null;
+function openDataModal(){
+  document.getElementById('data-overlay').classList.add('open');
+}
+function closeDataModal(){
+  document.getElementById('data-overlay').classList.remove('open');
+}
+
+function showConfirm(message){
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('confirm-overlay').classList.add('open');
+  return new Promise(resolve => { _confirmResolve = resolve; });
+}
+function resolveConfirm(result){
+  document.getElementById('confirm-overlay').classList.remove('open');
+  if(_confirmResolve){ _confirmResolve(result); _confirmResolve = null; }
+}
+
+/* ---------- Trips ---------- */
+
+function getCurrentTrip(){ return trips.find(t=>t.id===currentTripId); }
+function tripName(id){ const t = trips.find(x=>x.id===id); return t ? t.name : ''; }
+
+function renderTripTabs(){
+  const el = document.getElementById('trip-tabs');
+  const options = [`<option value="${ALL_TRIPS_ID}">All Trips</option>`]
+    .concat(trips.map(t => `<option value="${escapeAttr(t.id)}">${escapeHtml(t.name)}</option>`))
+    .concat([`<option value="__new__">+ New trip…</option>`]);
+  el.innerHTML = options.join('');
+  el.value = currentTripId;
+  document.getElementById('manage-trip-btn').style.display = currentTripId === ALL_TRIPS_ID ? 'none' : 'inline-block';
+}
+
+function handleTripSelectChange(value){
+  if(value === '__new__'){
+    document.getElementById('trip-tabs').value = currentTripId; // snap back until the new trip is saved
+    openTripModal();
+    return;
+  }
+  setTrip(value);
+}
+
+function setTrip(id){
+  currentTripId = id;
+  renderTripTabs();
+  renderTabs();
+  renderGrid();
+}
+
+
+function openTripModal(trip){
+  document.getElementById('trip-modal-title').textContent = trip ? 'Manage trip' : 'New trip';
+  document.getElementById('trip-edit-id').value = trip ? trip.id : '';
+  document.getElementById('trip-name').value = trip ? trip.name : '';
+  document.getElementById('delete-trip-btn').style.display = (trip && trips.length > 1) ? 'inline-block' : 'none';
+  document.getElementById('trip-overlay').classList.add('open');
+}
+function closeTripModal(){ document.getElementById('trip-overlay').classList.remove('open'); }
+
+
+async function saveTrip(){
+  const name = document.getElementById('trip-name').value.trim();
+  if(!name){ alert('Give the trip a name first.'); return; }
+  const id = document.getElementById('trip-edit-id').value || ('trip-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5));
+  const idx = trips.findIndex(t => t.id === id);
+  const trip = { id, name, createdAt: idx >= 0 ? trips[idx].createdAt : Date.now() };
+  try{ await store.putTrip(trip); }catch(e){ storageError(e); return; }
+  if(idx >= 0) trips[idx] = trip; else trips.push(trip);
+  currentTripId = id;
+  closeTripModal();
+  renderTripTabs();
+  renderTabs();
+  renderGrid();
+}
+
+async function deleteCurrentTrip(){
+  const id = document.getElementById('trip-edit-id').value;
+  if(!id) return;
+  if(trips.length <= 1){ alert('You need at least one trip.'); return; }
+  if(!(await showConfirm('Delete this trip? Its places will move to your other trip.'))) return;
+  const remaining = trips.filter(t => t.id !== id);
+  const fallbackId = remaining[0].id;
+  const moved = places.filter(p => p.tripId === id).map(p => ({ ...p, tripId: fallbackId }));
+  try{
+    await store.putMany(moved.map(p => ({ store: 'places', value: p })));
+    await store.deleteTrip(id);
+  }catch(e){ storageError(e); return; }
+  trips = remaining;
+  moved.forEach(m => { const i = places.findIndex(p => p.id === m.id); if(i >= 0) places[i] = m; });
+  if(currentTripId === id) currentTripId = fallbackId;
+  closeTripModal();
+  renderTripTabs();
+  renderTabs();
+  renderGrid();
+}
+
+
+/* ---------- Category / status / city filters ---------- */
+
+function renderTabs(){
+  const catTabs = document.getElementById('cat-tabs');
+  const inTrip = currentTripId===ALL_TRIPS_ID ? places : places.filter(p => (p.tripId||'') === currentTripId);
+  const otherLabels = [...new Set(
+    inTrip.filter(p => p.category === 'Other' && (p.categoryOther||'').trim())
+          .map(p => p.categoryOther.trim())
+  )].sort((a,b)=>a.localeCompare(b));
+  const baseOptions = CATEGORIES.map(c => `<option value="${escapeAttr(c)}">${c==='All' ? 'All categories' : c}</option>`);
+  const otherOptions = otherLabels.map(label => `<option value="other:${escapeAttr(label)}">${escapeHtml(label)}</option>`);
+  catTabs.innerHTML = baseOptions.concat(otherOptions).join('');
+  if(currentCategory.startsWith('other:') && !otherLabels.includes(currentCategory.slice(6))){
+    currentCategory = 'All'; // the label this was filtering on no longer exists
+  }
+  catTabs.value = currentCategory;
+
+  const statusTabs = document.getElementById('status-tabs');
+  statusTabs.innerHTML = STATUS_FILTERS.map(s => `<option value="${escapeAttr(s)}">${s==='All' ? 'All statuses' : s}</option>`).join('');
+  statusTabs.value = currentStatusFilter;
+}
+function setCategory(c){ currentCategory = c; renderTabs(); renderGrid(); }
+function setStatusFilter(s){ currentStatusFilter = s; renderTabs(); renderGrid(); }
+function setCityFilter(c){ currentCityFilter = c; renderGrid(); }
+
+function refreshCityOptions(){
+  const sel = document.getElementById('city-select');
+  const inTrip = currentTripId===ALL_TRIPS_ID ? places : places.filter(p => (p.tripId||'') === currentTripId);
+  const cities = [...new Set(inTrip.map(p=>(p.city||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b));
+  const prev = currentCityFilter;
+  sel.innerHTML = `<option value="All">All cities</option>` +
+    cities.map(c=>`<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
+  if(cities.includes(prev)) sel.value = prev; else { currentCityFilter='All'; sel.value='All'; }
+}
+
+function starsHtml(rating){
+  const pct = Math.max(0, Math.min(5, rating||0)) / 5 * 100;
+  return `<span class="stars" style="position:relative; display:inline-block; line-height:1;">`
+    + `<span class="empty">★★★★★</span>`
+    + `<span style="position:absolute; top:0; left:0; overflow:hidden; width:${pct}%; white-space:nowrap; color:var(--mustard);">★★★★★</span>`
+    + `</span>`;
+}
+
+function priceHtml(price){
+  const pct = Math.max(0, Math.min(4, price||0)) / 4 * 100;
+  return `<span class="stars" style="position:relative; display:inline-block; line-height:1; font-family:'Space Mono',monospace; font-weight:700; font-size:19px;">`
+    + `<span class="empty">$$$$</span>`
+    + `<span style="position:absolute; top:0; left:0; overflow:hidden; width:${pct}%; white-space:nowrap; color:#1f5c27;">$$$$</span>`
+    + `</span>`;
+}
+
+function locationQuery(p){
+  const parts = [p.address, p.city].map(s=>(s||'').trim()).filter(Boolean);
+  return parts.join(', ') || (p.city||'').trim();
+}
+
+function mapUrl(p){
+  const q = [p.name, p.address, p.city].map(s=>(s||'').trim()).filter(Boolean).join(', ');
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines, haloColor, haloWidth){
+  const words = (text||'').split(/\s+/).filter(Boolean);
+  let line = '';
+  let lines = [];
+  for(let i=0;i<words.length;i++){
+    const test = line ? line + ' ' + words[i] : words[i];
+    if(ctx.measureText(test).width > maxWidth && line){
+      lines.push(line);
+      line = words[i];
+      if(lines.length >= maxLines) break;
+    } else {
+      line = test;
+    }
+  }
+  if(line && lines.length < maxLines) lines.push(line);
+  if(lines.length === maxLines && words.join(' ') !== lines.join(' ')){
+    let last = lines[lines.length-1];
+    while(ctx.measureText(last + '…').width > maxWidth && last.length > 1){
+      last = last.slice(0, -1);
+    }
+    lines[lines.length-1] = last + '…';
+  }
+  lines.forEach((l, i) => {
+    if(haloColor){
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = haloColor;
+      ctx.lineWidth = haloWidth || 6;
+      ctx.strokeText(l, x, y + i*lineHeight);
+    }
+    ctx.fillText(l, x, y + i*lineHeight);
+  });
+  return y + lines.length*lineHeight;
+}
+
+function countWrappedLines(ctx, text, maxWidth){
+  const words = (text||'').split(/\s+/).filter(Boolean);
+  if(!words.length) return 0;
+  let line = '', lines = 0;
+  for(let i=0;i<words.length;i++){
+    const test = line ? line + ' ' + words[i] : words[i];
+    if(ctx.measureText(test).width > maxWidth && line){
+      lines++;
+      line = words[i];
+    } else {
+      line = test;
+    }
+  }
+  if(line) lines++;
+  return lines;
+}
+
+function drawSparkleStar(ctx, cx, cy, size, color){
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(0, -size);
+  ctx.lineTo(size*0.18, -size*0.18);
+  ctx.lineTo(size, 0);
+  ctx.lineTo(size*0.18, size*0.18);
+  ctx.lineTo(0, size);
+  ctx.lineTo(-size*0.18, size*0.18);
+  ctx.lineTo(-size, 0);
+  ctx.lineTo(-size*0.18, -size*0.18);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function loadImageSafe(src){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('image load failed'));
+    img.src = src;
+  });
+}
+
+let footerIconPromise = null;
+function loadFooterIcon(){
+  if(!footerIconPromise){
+    footerIconPromise = new Promise((resolve)=>{
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = 'icon-512.png';
+    });
+  }
+  return footerIconPromise;
+}
+
+function roundedRectPath(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+
+async function buildShareCardBlob(p){
+  const W = 1080;
+  const heroH = 890;
+  const pad = 56;
+  const ribbonH = 128;
+
+  try{
+    await Promise.all([
+      document.fonts.load('700 58px "Alfa Slab One"'),
+      document.fonts.load('700 24px "Space Mono"'),
+      document.fonts.load('600 30px "Poppins"'),
+      document.fonts.load('400 27px "Poppins"'),
+      document.fonts.load('italic 30px "Poppins"')
+    ]);
+    await document.fonts.ready;
+  }catch(e){ /* fonts may still render with fallback */ }
+
+  // Figure out how much content-area height we actually need, so nothing can
+  // ever get clipped/overlapped by the bottom ribbon, and long notes never get
+  // truncated — measured against the real text, not a worst-case guess.
+  const showSealForSizing = p.status === 'visited' && !!p.rating;
+  const infoLineCount = ((p.address || p.city) ? 1 : 0) + (p.phone ? 1 : 0) + (p.website ? 1 : 0);
+
+  const scratch = document.createElement('canvas');
+  scratch.width = W; scratch.height = 10;
+  const sctx = scratch.getContext('2d');
+
+  const titleAreaW = showSealForSizing ? (W - 300 - pad) : (W - pad*2);
+  sctx.font = '700 58px "Alfa Slab One"';
+  const titleLines = Math.min(2, Math.max(1, countWrappedLines(sctx, p.name, titleAreaW)));
+
+  let notesLines = 0;
+  if(p.notes){
+    sctx.font = 'italic 30px "Poppins"';
+    notesLines = countWrappedLines(sctx, p.notes, W - pad*2);
+  }
+
+  let neededContentH = 0;
+  neededContentH += 34;          // gap between hero bottom and title start (matches real draw start position)
+  neededContentH += titleLines * 62;
+  neededContentH += 10;          // gap after title
+  neededContentH += 60;          // category/trip/price pill row
+  if(!showSealForSizing) neededContentH += 44; // status line only shown without the rating seal
+  neededContentH += infoLineCount * 38; // address / phone / website, one line each
+  neededContentH += 10;          // gap before notes
+  neededContentH += notesLines * 38; // notes, full length, never truncated
+  neededContentH += 40;          // breathing room before the ribbon
+
+  const minH = 1350;
+  const H = Math.max(minH, heroH + neededContentH + ribbonH + 28);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#F2E6C9';
+  ctx.fillRect(0, 0, W, H);
+
+  let photoImg = null;
+  const photoSource = photoSrc(p);
+  if(photoSource){
+    try{ photoImg = await loadImageSafe(photoSource); }
+    catch(e){ console.error('Share card: photo failed to load (likely blocked by the host\'s CORS policy):', photoSource, e); photoImg = null; }
+  }
+  const hasPhoto = !!photoImg;
+  const footerIcon = await loadFooterIcon();
+
+  // ---- Hero zone ----
+  ctx.save();
+  roundedRectPath(ctx, 14, 14, W-28, heroH-14, 22);
+  ctx.clip();
+
+  if(hasPhoto){
+    const scale = Math.max(W/photoImg.width, heroH/photoImg.height);
+    const iw = photoImg.width*scale, ih = photoImg.height*scale;
+    ctx.drawImage(photoImg, W/2 - iw/2, heroH/2 - ih/2, iw, ih);
+  } else {
+    ctx.fillStyle = '#1E8F86';
+    ctx.fillRect(0, 0, W, heroH);
+    ctx.save();
+    ctx.translate(W/2, heroH*0.42);
+    for(let i=0;i<24;i++){
+      ctx.rotate(Math.PI/12);
+      ctx.fillStyle = 'rgba(232,163,61,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.arc(0,0,520,-0.045,0.045);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    if(footerIcon){
+      const iw2 = 460, ih2 = 460;
+      const ix = W/2 - iw2/2, iy = heroH*0.42 - ih2/2;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 26;
+      ctx.shadowOffsetY = 10;
+      ctx.fillStyle = '#F2E6C9';
+      roundedRectPath(ctx, ix-18, iy-18, iw2+36, ih2+36, 20);
+      ctx.fill();
+      ctx.restore();
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = '#2B2620';
+      roundedRectPath(ctx, ix-18, iy-18, iw2+36, ih2+36, 20);
+      ctx.stroke();
+      ctx.drawImage(footerIcon, ix, iy, iw2, ih2);
+    }
+  }
+  ctx.restore();
+
+  // Outer border + hero/content divider
+  ctx.strokeStyle = '#2B2620';
+  ctx.lineWidth = 10;
+  roundedRectPath(ctx, 14, 14, W-28, H-28, 22);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(14, heroH);
+  ctx.lineTo(W-14, heroH);
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = '#2B2620';
+  ctx.stroke();
+
+  drawSparkleStar(ctx, 66, 52, 20, '#E8604C');
+  drawSparkleStar(ctx, 108, 76, 12, hasPhoto ? '#E8604C' : '#F2E6C9');
+
+  // ---- Rating seal, overlapping hero/content boundary ----
+  const showSeal = p.status === 'visited' && !!p.rating;
+  if(showSeal){
+    const cx = 165, cy = heroH, r = 118;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.fillStyle = '#E8604C';
+    ctx.fill();
+    ctx.lineWidth = 9;
+    ctx.strokeStyle = '#2B2620';
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#F2E6C9';
+    ctx.textAlign = 'center';
+    ctx.font = '700 60px "Alfa Slab One"';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(p.rating.toFixed(1), cx, cy-2);
+    ctx.font = '700 28px "Space Mono"';
+    ctx.fillText('★'.repeat(Math.round(p.rating)), cx, cy+32);
+    ctx.font = '700 20px "Space Mono"';
+    ctx.fillText('VISITED', cx, cy+62);
+    ctx.textAlign = 'left';
+  }
+
+  // ---- Content below hero ----
+  const contentX = showSeal ? 300 : pad;
+  const textW = W - contentX - pad;
+  let cursorY = heroH + 34;
+  ctx.textBaseline = 'top';
+
+  ctx.fillStyle = '#2C5C64';
+  ctx.font = '700 58px "Alfa Slab One"';
+  cursorY = wrapCanvasText(ctx, p.name, contentX, cursorY, textW, 62, 2, '#FFFDF6', 7);
+  cursorY += 10;
+
+  ctx.font = '700 18px "Space Mono"';
+  const trip = trips.find(t=>t.id===p.tripId);
+  let pillText = categoryLabel(p).toUpperCase() + '  ·  ' + (trip ? trip.name.toUpperCase() : 'WAYPOINTS');
+  if(p.price) pillText += '  ·  ' + '$'.repeat(p.price);
+  const pillW = ctx.measureText(pillText).width + 32;
+  ctx.fillStyle = '#E8604C';
+  roundedRectPath(ctx, contentX, cursorY, pillW, 36, 8);
+  ctx.fill();
+  ctx.strokeStyle = '#2B2620'; ctx.lineWidth = 2;
+  roundedRectPath(ctx, contentX, cursorY, pillW, 36, 8);
+  ctx.stroke();
+  ctx.fillStyle = '#F2E6C9';
+  ctx.fillText(pillText, contentX+16, cursorY+9);
+  cursorY += 60;
+
+  if(!showSeal){
+    // status line still shown when there's no seal (want-to-go, or visited w/o rating)
+    ctx.font = '700 24px "Space Mono"';
+    ctx.fillStyle = p.status === 'visited' ? '#1f5c27' : '#E8604C';
+    ctx.fillText(p.status === 'visited' ? 'VISITED' : 'WANT TO GO', contentX, cursorY);
+    cursorY += 44;
+  }
+
+  // Address / phone / suggested-by
+  ctx.font = '600 30px "Poppins"';
+  ctx.fillStyle = '#2B2620';
+  const infoLines = [];
+  if(p.address || p.city) infoLines.push('📍 ' + [p.address, p.city].filter(Boolean).join(', '));
+  if(p.phone) infoLines.push('📞 ' + p.phone);
+  if(p.website) infoLines.push('🔗 ' + p.website);
+  infoLines.forEach(line=>{
+    cursorY = wrapCanvasText(ctx, line, contentX, cursorY, textW, 38, 1) + 8;
+  });
+  cursorY += 10;
+
+  // Notes — no line cap, so long notes are never truncated (the canvas height
+  // above was already measured to fit the full text)
+  if(p.notes){
+    ctx.font = 'italic 30px "Poppins"';
+    ctx.fillStyle = '#4A473F';
+    cursorY = wrapCanvasText(ctx, p.notes, pad, cursorY, W - pad*2, 38, 999);
+  }
+
+  // ---- Bottom CTA ribbon ----
+  const ribbonY = H - 14 - ribbonH;
+  ctx.fillStyle = '#E8604C';
+  ctx.fillRect(14, ribbonY, W-28, ribbonH);
+  ctx.beginPath();
+  ctx.moveTo(14, ribbonY);
+  ctx.lineTo(W-14, ribbonY);
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = '#2B2620';
+  ctx.stroke();
+
+  if(footerIcon){
+    const bH = 78;
+    ctx.drawImage(footerIcon, pad, ribbonY + (ribbonH-bH)/2, bH, bH);
+    ctx.fillStyle = '#F2E6C9';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 32px "Space Mono"';
+    ctx.fillText('SAVED WITH WAYPOINTS', pad + bH + 20, ribbonY + ribbonH/2 - 18);
+    ctx.font = '700 30px "Space Mono"';
+    ctx.fillText('hunterappstudio.com', pad + bH + 20, ribbonY + ribbonH/2 + 22);
+  }
+
+  return new Promise(resolve => canvas.toBlob(blob => {
+    resolve({ blob, photoRequested: !!photoSource, photoLoaded: hasPhoto });
+  }, 'image/jpeg', 0.9));
+}
+
+async function sharePlace(id){
+  const p = places.find(x=>x.id===id);
+  if(!p) return;
+
+  const lines = [p.name];
+  if(p.status === 'visited' && p.rating){
+    const rounded = Math.round(p.rating);
+    lines.push('★'.repeat(rounded) + '☆'.repeat(5-rounded) + ` ${p.rating}/5`);
+  } else if(p.status === 'visited'){
+    lines.push('Visited ✅');
+  } else {
+    lines.push('On our travel list 🧭');
+  }
+  const locLine = [p.city, p.address].filter(Boolean).join(' · ');
+  if(locLine) lines.push(locLine);
+  if(p.notes) lines.push(p.notes);
+  let caption = lines.join('\n');
+
+  const linkLines = [mapUrl(p)];
+  if(p.website) linkLines.push(p.website);
+  if(p.social) linkLines.push(p.social);
+  const linksBlock = linkLines.join('\n');
+
+  let file = null;
+  let photoFailedToLoad = false;
+  try{
+    const result = await buildShareCardBlob(p);
+    if(result && result.blob){
+      const safeName = (p.name || 'place').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      file = new File([result.blob], safeName + '.jpg', { type: 'image/jpeg' });
+      photoFailedToLoad = result.photoRequested && !result.photoLoaded;
+    }
+  }catch(e){ console.error('Share card build failed', e); }
+
+  if(photoFailedToLoad){
+    caption += '\n\n(Note: the photo couldn\'t be included on the card.)';
+  }
+
+  if(file){
+    // Try sharing the actual image directly — attempt this even if canShare()
+    // wasn't fully confident, since some browsers under-report file support.
+    // Deliberately using `caption` (no URLs) here: a map/website link in the
+    // share text causes Facebook and similar apps to auto-generate their own
+    // link-preview card, which then overrides or buries our actual designed
+    // image — the location is already shown visually on the card itself.
+    if(navigator.share){
+      try{ await navigator.share({ title: p.name, text: caption, files: [file] }); return; }
+      catch(e){ /* cancelled, or this device truly can't share files — fall through */ }
+    }
+    // Never fall back to a text-only share here — sharing just the text (which
+    // would include a map link) causes Facebook/etc. to render an auto map-
+    // preview card instead of our actual designed image. Download + copy
+    // instead, so the person still gets the real card to attach manually.
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url; a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    const downloadCaption = caption + '\n\n' + linksBlock;
+    try{
+      await navigator.clipboard.writeText(downloadCaption);
+      alert('Downloaded a shareable card image for "' + p.name + '" and copied the caption to your clipboard — attach the image and paste the caption when you post.');
+    }catch(e){
+      alert('Downloaded a shareable card image for "' + p.name + '". Caption:\n\n' + downloadCaption);
+    }
+    return;
+  }
+
+  // No image at all (card build failed) — text-only is the only option left,
+  // so the map/website links are worth including here since there's no
+  // image for them to compete with.
+  const fullText = caption + '\n\n' + linksBlock;
+  if(navigator.share){
+    try{ await navigator.share({ title: p.name, text: fullText }); return; }
+    catch(e){ /* cancelled or unsupported — fall through to clipboard */ }
+  }
+  try{
+    await navigator.clipboard.writeText(fullText);
+    alert('Copied "' + p.name + '" to your clipboard — paste it anywhere to share.');
+  }catch(e){
+    alert(fullText);
+  }
+}
+
+function categoryLabel(p){
+  if(p.category === 'Other') return p.categoryOther || 'Other';
+  if(p.category === 'Attraction' && p.categoryOther) return `Attraction — ${p.categoryOther}`;
+  return p.category;
+}
+
+function cardHtml(p){
+  const loc = locationQuery(p);
+  return `
+    <div class="card" onclick="editPlace('${p.id}')">
+      ${photoSrc(p) ? `<div class="photo" style="background-image:url('${escapeAttr(photoSrc(p))}')"></div>` : ''}
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-title">${escapeHtml(p.name)}</div>
+          <span class="cat-pill">${escapeHtml(categoryLabel(p))}</span>
+        </div>
+        ${p.price ? `<div>${priceHtml(p.price)}</div>` : ''}
+        ${currentTripId===ALL_TRIPS_ID ? `<div class="addr">🧭 ${escapeHtml(tripName(p.tripId))}</div>` : ''}
+        ${p.recommendedBy ? `<div class="addr">🙋 Recommended by ${escapeHtml(p.recommendedBy)}</div>` : ''}
+        ${p.address ? `<div class="addr">📍 ${escapeHtml(p.address)}</div>` : ''}
+        ${p.phone ? `<div class="addr"><a class="place-link" href="tel:${escapeAttr(p.phone.replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()">📞 ${escapeHtml(p.phone)}</a></div>` : ''}
+        <div class="link-row">
+          ${loc ? `<a class="place-link" href="${escapeAttr(mapUrl(p))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">🗺 Map</a>` : ''}
+          ${p.website ? `<a class="place-link" href="${escapeAttr(p.website)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">🔗 Website</a>` : ''}
+          ${p.social ? `<a class="place-link" href="${escapeAttr(p.social)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">📷 Social</a>` : ''}
+        </div>
+        ${p.notes ? `<div class="notes">${escapeHtml(p.notes)}</div>` : ''}
+        <div class="status-row">
+          <div>
+            ${p.status==='visited'
+              ? `<span class="status-badge status-visited">Visited</span> ${p.rating? starsHtml(p.rating):''}`
+              : `<span class="status-badge status-want">Want to go</span>`}
+          </div>
+          <div class="card-actions">
+            <button class="icon-btn" onclick="event.stopPropagation(); sharePlace('${p.id}')" title="Share this place">📤</button>
+            <button class="icon-btn" onclick="event.stopPropagation(); deletePlace('${p.id}')" title="Delete">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderGrid(){
+  const content = document.getElementById('content');
+  refreshCityOptions();
+
+  let filtered = places.filter(p=>{
+    const tripOk = currentTripId===ALL_TRIPS_ID || (p.tripId||'') === currentTripId;
+    let catOk;
+    if(currentCategory === 'All') catOk = true;
+    else if(currentCategory.startsWith('other:')) catOk = p.category === 'Other' && (p.categoryOther||'').trim() === currentCategory.slice(6);
+    else if(currentCategory === 'Other') catOk = p.category === 'Other' && !(p.categoryOther||'').trim();
+    else catOk = p.category === currentCategory;
+    const statOk = currentStatusFilter==='All' ||
+      (currentStatusFilter==='Visited' && p.status==='visited') ||
+      (currentStatusFilter==='Want to go' && p.status==='want');
+    const cityOk = currentCityFilter==='All' || (p.city||'').trim()===currentCityFilter;
+    return tripOk && catOk && statOk && cityOk;
+  });
+
+  const inTrip = currentTripId===ALL_TRIPS_ID ? places : places.filter(p => (p.tripId||'') === currentTripId);
+  document.getElementById('stat-total').textContent = inTrip.length;
+  document.getElementById('stat-visited').textContent = inTrip.filter(p=>p.status==='visited').length;
+  document.getElementById('stat-want').textContent = inTrip.filter(p=>p.status==='want').length;
+
+  if(filtered.length===0){
+    content.innerHTML = trips.length===0
+      ? `<div class="empty-state">No trips yet. Tap "+ New trip" above to start one, then add places to it.</div>`
+      : `<div class="empty-state">Nothing here yet. Tap "+ Add place" to start this trip's log.</div>`;
+    return;
+  }
+
+  // Group by city
+  const groups = {};
+  filtered.forEach(p=>{
+    const city = (p.city||'').trim() || 'Unsorted';
+    if(!groups[city]) groups[city] = [];
+    groups[city].push(p);
+  });
+  const cityNames = Object.keys(groups).sort((a,b)=>{
+    if(a==='Unsorted') return 1;
+    if(b==='Unsorted') return -1;
+    return a.localeCompare(b);
+  });
+  cityNames.forEach(c => groups[c].sort((a,b)=> a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })));
+
+  content.innerHTML = cityNames.map((city, idx) => {
+    const band = BANDS[idx % BANDS.length];
+    return `
+    <div class="city-group">
+      <div class="city-heading ${band}">
+        <h3>${escapeHtml(city)}</h3>
+        <div class="city-meta">
+          <span class="city-count">${groups[city].length} place${groups[city].length===1?'':'s'}</span>
+          ${city!=='Unsorted' ? `<span class="weather-chip" data-loc="${escapeAttr(city)}">⋯</span>` : ''}
+          ${city!=='Unsorted' ? `<button class="city-map-btn" onclick="openCityMap('${escapeAttr(city)}')">🗺 View all</button>` : ''}
+        </div>
+      </div>
+      <div class="city-scallop ${band}"></div>
+      <div class="grid">${groups[city].map(cardHtml).join('')}</div>
+    </div>
+  `;
+  }).join('');
+
+  hydrateWeather();
+}
+
+const weatherCache = {}; // key: lowercased location -> {promise}
+
+function weatherIcon(condition){
+  const c = (condition||'').toLowerCase();
+  if(c.includes('storm') || c.includes('thunder')) return '⛈';
+  if(c.includes('snow') || c.includes('sleet')) return '❄️';
+  if(c.includes('rain') || c.includes('shower') || c.includes('drizzle')) return '🌧';
+  if(c.includes('fog') || c.includes('mist') || c.includes('haze')) return '🌫';
+  if(c.includes('cloud')) return (c.includes('partly') || c.includes('few')) ? '⛅' : '☁️';
+  if(c.includes('clear') || c.includes('sun')) return '☀️';
+  return '🌡';
+}
+
+async function fetchWeather(loc){
+  const key = loc.toLowerCase();
+  if(weatherCache[key]) return weatherCache[key].promise;
+  // TODO(native): swap for Apple WeatherKit before selling. Open-Meteo's free
+  // tier is for non-commercial use only; fine for personal testing.
+  const promise = fetchWeatherViaOpenMeteo(loc);
+  weatherCache[key] = { promise };
+  return promise;
+}
+
+
+async function fetchWeatherViaOpenMeteo(loc){
+  try{
+    const geoRes = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=' + encodeURIComponent(loc));
+    const geoData = await geoRes.json();
+    if(!geoData.results || !geoData.results.length) return { error: true };
+    const { latitude, longitude } = geoData.results[0];
+    const wxRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&temperature_unit=fahrenheit&timezone=auto`);
+    const wxData = await wxRes.json();
+    if(!wxData.current_weather) return { error: true };
+    return { temp: Math.round(wxData.current_weather.temperature), condition: openMeteoLabel(wxData.current_weather.weathercode) };
+  }catch(e){
+    console.error('Weather fetch (Open-Meteo) failed for', loc, e);
+    return { error: true };
+  }
+}
+
+function openMeteoLabel(code){
+  const map = {
+    0:'Clear', 1:'Mostly clear', 2:'Partly cloudy', 3:'Cloudy',
+    45:'Fog', 48:'Fog',
+    51:'Drizzle', 53:'Drizzle', 55:'Drizzle',
+    61:'Rain', 63:'Rain', 65:'Heavy rain',
+    71:'Snow', 73:'Snow', 75:'Heavy snow',
+    80:'Showers', 81:'Showers', 82:'Storms',
+    95:'Storms', 96:'Storms', 99:'Storms'
+  };
+  return map[code] || 'Unknown';
+}
+
+async function hydrateWeather(){
+  const slots = document.querySelectorAll('.weather-chip[data-loc]');
+  const uniqueLocs = [...new Set([...slots].map(s=>s.getAttribute('data-loc')))];
+  uniqueLocs.forEach(async (loc)=>{
+    const result = await fetchWeather(loc);
+    const matching = document.querySelectorAll(`.weather-chip[data-loc="${CSS.escape(loc)}"]`);
+    matching.forEach(el=>{
+      if(!result || result.error){
+        el.textContent = '— weather unavailable';
+        el.style.opacity = '0.6';
+      } else {
+        el.innerHTML = `${weatherIcon(result.condition)} ${result.temp}°F · ${escapeHtml(result.condition)}`;
+      }
+    });
+  });
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+function escapeAttr(s){ return (s||'').replace(/'/g,"%27"); }
+
+function setStatus(s){
+  currentStatus = s;
+  document.getElementById('btn-want').classList.toggle('selected', s==='want');
+  document.getElementById('btn-visited').classList.toggle('selected', s==='visited');
+}
+
+function renderRatingInput(){
+  const el = document.getElementById('rating-input');
+  el.innerHTML = '';
+  for(let i=1;i<=5;i++){
+    const fillAmount = Math.max(0, Math.min(1, currentRating - (i-1)));
+    const wrap = document.createElement('span');
+    wrap.className = 'rating-star';
+    wrap.innerHTML =
+      `<span class="rating-star-bg">★</span>` +
+      `<span class="rating-star-fill" style="width:${fillAmount*100}%;">★</span>`;
+    wrap.onclick = (e)=>{
+      const rect = wrap.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const isHalf = clickX < rect.width/2;
+      const newVal = isHalf ? i-0.5 : i;
+      currentRating = (currentRating===newVal) ? 0 : newVal;
+      renderRatingInput();
+    };
+    el.appendChild(wrap);
+  }
+}
+
+function renderPriceInput(){
+  const el = document.getElementById('price-input');
+  el.innerHTML = '';
+  for(let i=1;i<=4;i++){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '$'.repeat(i);
+    btn.className = i<=currentPrice ? 'selected' : '';
+    btn.onclick = ()=>{ currentPrice = (currentPrice===i) ? 0 : i; renderPriceInput(); };
+    el.appendChild(btn);
+  }
+}
+
+function addPlaceClicked(){
+  if(trips.length===0){
+    alert('Create a trip first, then you can start adding places to it.');
+    openTripModal();
+    return;
+  }
+  openModal();
+}
+
+function toggleCategoryDetail(){
+  const cat = document.getElementById('f-category').value;
+  const input = document.getElementById('f-category-other');
+  if(cat === 'Other'){
+    input.style.display = 'block';
+    input.placeholder = 'What kind of place is it?';
+  } else if(cat === 'Attraction'){
+    input.style.display = 'block';
+    input.placeholder = 'What kind of attraction? e.g. Museum, Park, Landmark';
+  } else {
+    input.style.display = 'none';
+  }
+}
+
+
+function compressImageFile(file, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      const scale = Math.min(1, maxDim / Math.max(w, h));
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Could not compress that image')), 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read that image')); };
+    img.src = url;
+  });
+}
+
+async function handlePhotoFileChange(event){
+  const file = event.target.files[0];
+  event.target.value = ''; // reset so choosing the same file again still fires change
+  if(!file) return;
+  if(!file.type.startsWith('image/')){
+    alert('Please choose an image file.');
+    return;
+  }
+  try{
+    const blob = await compressImageFile(file, 1600, 0.82);
+    if(pendingPhoto) URL.revokeObjectURL(pendingPhoto.previewUrl);
+    pendingPhoto = { blob, previewUrl: URL.createObjectURL(blob) };
+    photoRemoved = false;
+    renderPhotoPreview();
+  }catch(e){
+    console.error('Photo compression failed', e);
+    alert('Could not process that photo — try a different one.');
+  }
+}
+
+function removePhoto(){
+  if(pendingPhoto){ URL.revokeObjectURL(pendingPhoto.previewUrl); pendingPhoto = null; }
+  photoRemoved = true;
+  renderPhotoPreview();
+}
+
+function renderPhotoPreview(){
+  const row = document.getElementById('photo-preview-row');
+  let url = '';
+  if(pendingPhoto){
+    url = pendingPhoto.previewUrl;
+  } else if(!photoRemoved){
+    const existing = places.find(x => x.id === document.getElementById('edit-id').value);
+    url = existing ? photoSrc(existing) : '';
+  }
+  row.innerHTML = url ? `
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+      <img src="${escapeAttr(url)}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:2px solid var(--ink);">
+      <button type="button" class="btn-secondary" onclick="removePhoto()">✕ Remove photo</button>
+    </div>` : '';
+}
+
+function openModal(place){
+  document.getElementById('modal-title').textContent = place ? 'Edit place' : 'Add a place';
+  document.getElementById('edit-id').value = place ? place.id : '';
+  document.getElementById('place-search-input').value = '';
+  document.getElementById('place-search-results').innerHTML = '';
+  document.getElementById('f-name').value = place ? place.name : '';
+  const tripSel = document.getElementById('f-trip');
+  tripSel.innerHTML = trips.map(t => `<option value="${escapeAttr(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+  tripSel.value = place ? (place.tripId || currentTripId) : (currentTripId===ALL_TRIPS_ID ? (trips[0] ? trips[0].id : '') : currentTripId);
+  document.getElementById('f-recommended').value = place ? (place.recommendedBy||'') : '';
+  document.getElementById('f-category').value = place ? place.category : 'Restaurant';
+  document.getElementById('f-category-other').value = place ? (place.categoryOther||'') : '';
+  toggleCategoryDetail();
+  document.getElementById('f-city').value = place ? (place.city||'') : '';
+  document.getElementById('f-address').value = place ? (place.address||'') : '';
+  document.getElementById('f-phone').value = place ? (place.phone||'') : '';
+  document.getElementById('f-notes').value = place ? (place.notes||'') : '';
+  pendingPhoto = null;
+  photoRemoved = false;
+  renderPhotoPreview();
+  document.getElementById('f-website').value = place ? (place.website||'') : '';
+  document.getElementById('f-social').value = place ? (place.social||'') : '';
+  currentStatus = place ? place.status : 'want';
+  currentRating = place ? (place.rating||0) : 0;
+  currentPrice = place ? (place.price||0) : 0;
+  setStatus(currentStatus);
+  renderRatingInput();
+  renderPriceInput();
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('overlay').classList.remove('open');
+  if(pendingPhoto){ URL.revokeObjectURL(pendingPhoto.previewUrl); pendingPhoto = null; }
+  photoRemoved = false;
+}
+
+function editPlace(id){
+  const p = places.find(x=>x.id===id);
+  if(p) openModal(p);
+}
+
+async function savePlace(){
+  const name = document.getElementById('f-name').value.trim();
+  if(!name){ alert('Give it a name first.'); return; }
+  const id = document.getElementById('edit-id').value || (Date.now().toString(36)+Math.random().toString(36).slice(2,7));
+  const existing = places.find(p => p.id === id);
+
+  const place = {
+    id,
+    tripId: document.getElementById('f-trip').value || currentTripId,
+    name,
+    category: document.getElementById('f-category').value,
+    categoryOther: document.getElementById('f-category-other').value.trim(),
+    city: document.getElementById('f-city').value.trim(),
+    address: document.getElementById('f-address').value.trim(),
+    phone: document.getElementById('f-phone').value.trim(),
+    notes: document.getElementById('f-notes').value.trim(),
+    website: document.getElementById('f-website').value.trim(),
+    social: document.getElementById('f-social').value.trim(),
+    recommendedBy: document.getElementById('f-recommended').value.trim(),
+    status: currentStatus,
+    rating: currentStatus==='visited' ? currentRating : 0,
+    price: currentPrice,
+    hasPhoto: existing ? !!existing.hasPhoto : false,
+    photoUrl: existing ? (existing.photoUrl || '') : '',
+    createdAt: existing ? existing.createdAt : Date.now()
+  };
+
+  try{
+    if(pendingPhoto){
+      await savePhotoFor(id, pendingPhoto.blob);
+      place.hasPhoto = true;
+      place.photoUrl = '';
+    } else if(photoRemoved){
+      await store.deletePhoto(id);
+      clearPhotoURL(id);
+      place.hasPhoto = false;
+      place.photoUrl = '';
+    }
+    await store.putPlace(place);
+  }catch(e){ storageError(e); return; }
+
+  const idx = places.findIndex(p => p.id === id);
+  if(idx >= 0) places[idx] = place; else places.push(place);
+  closeModal();
+  renderTabs();
+  renderGrid();
+}
+
+async function deletePlace(id){
+  if(!(await showConfirm('Remove this place from the log?'))) return;
+  try{ await store.deletePlace(id); }catch(e){ storageError(e); return; }
+  clearPhotoURL(id);
+  places = places.filter(p => p.id !== id);
+  renderTabs();
+  renderGrid();
+}
+
+async function exportData(){
+  try{
+    const photoRecs = await store.getPhotos();
+    const photos = {};
+    photoRecs.forEach(r => { photos[r.id] = bufferToDataUrl(r.type || 'image/jpeg', r.data); });
+    const payload = { app: 'waypoints', version: 2, exportedAt: new Date().toISOString(), trips, places, photos };
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'waypoints-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }catch(e){
+    console.error('Export failed', e);
+    alert('Could not export right now.');
+  }
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      const inPlaces = Array.isArray(data) ? data : (data.places || []);
+      const inTrips = Array.isArray(data) ? [] : (data.trips || []);
+      const inPhotos = (!Array.isArray(data) && data.photos) || {};
+      const inTravelers = (!Array.isArray(data) && data.travelers) || [];  // older shared-list exports
+      if(!Array.isArray(inPlaces)) throw new Error('This file is not a Waypoints backup');
+
+      const travelerNames = {};
+      inTravelers.forEach(t => { if(t && t.id) travelerNames[t.id] = t.name; });
+
+      const newTrips = [];
+      inTrips.forEach(t => {
+        if(t && t.id && !trips.some(x => x.id === t.id) && !newTrips.some(x => x.id === t.id)){
+          newTrips.push({ id: t.id, name: t.name || 'Trip', createdAt: t.createdAt || Date.now() });
+        }
+      });
+      const allTrips = trips.concat(newTrips);
+      let fallbackTrip = allTrips[0];
+      if(!fallbackTrip && inPlaces.some(p => p && p.id)){
+        fallbackTrip = { id: 'trip-imported', name: 'Imported places', createdAt: Date.now() };
+        newTrips.push(fallbackTrip);
+        allTrips.push(fallbackTrip);
+      }
+
+      const newPlaces = [];
+      const newPhotos = [];
+      inPlaces.forEach(src => {
+        if(!src || !src.id || places.some(x => x.id === src.id) || newPlaces.some(x => x.id === src.id)) return;
+        const place = { ...src };
+        // Older shared-list data: "suggested by" was a traveler id (or name) -> plain "recommended by" text
+        if(place.suggestedBy){
+          if(!place.recommendedBy){
+            place.recommendedBy = travelerNames[place.suggestedBy] || (/^trav-/.test(place.suggestedBy) ? '' : place.suggestedBy);
+          }
+          delete place.suggestedBy;
+        }
+        // Photos: embedded data -> stored on this device; pasted links are kept for display only
+        let photoData = inPhotos[place.id] || '';
+        if(place.photo){
+          if(/^data:/.test(place.photo)){ photoData = photoData || place.photo; }
+          else if(/^https?:/.test(place.photo)){ place.photoUrl = place.photo; }
+          delete place.photo;
+        }
+        place.hasPhoto = false;
+        if(photoData){
+          newPhotos.push({ id: place.id, blob: dataUrlToBlob(photoData) });
+          place.hasPhoto = true;
+        }
+        if(!place.tripId || !allTrips.some(t => t.id === place.tripId)) place.tripId = fallbackTrip ? fallbackTrip.id : '';
+        if(!place.createdAt) place.createdAt = Date.now();
+        newPlaces.push(place);
+      });
+
+      await store.putMany(
+        newTrips.map(t => ({ store: 'trips', value: t })).concat(newPlaces.map(p => ({ store: 'places', value: p })))
+      );
+      for(const ph of newPhotos){ await savePhotoFor(ph.id, ph.blob); }
+
+      trips = trips.concat(newTrips);
+      places = places.concat(newPlaces);
+      renderTripTabs();
+      renderTabs();
+      renderGrid();
+      alert(`Imported ${newPlaces.length} place${newPlaces.length===1?'':'s'} and ${newTrips.length} trip${newTrips.length===1?'':'s'}.`);
+    }catch(err){
+      console.error('Import failed', err);
+      alert('Could not read that file: ' + err.message);
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function showBanner(type, text){
+  const b = document.getElementById('save-banner');
+  b.className = 'banner ' + type;
+  b.textContent = text;
+  b.style.display = 'block';
+}
+function hideBanner(){
+  document.getElementById('save-banner').style.display = 'none';
+}
+
+
+async function init(){
+  currentTripId = ALL_TRIPS_ID;
+  try{
+    await store.init();
+    const [t, p] = await Promise.all([store.getTrips(), store.getPlaces()]);
+    trips = t.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    places = p;
+    await loadAllPhotos();
+  }catch(e){
+    console.error('Storage failed to start', e);
+    showBanner('error', "Couldn't open this device's storage, so your list can't be saved right now.");
+  }
+  renderTripTabs();
+  renderTabs();
+  renderGrid();
+}
+
+init();
+</script>
+</body>
+</html>
