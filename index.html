@@ -279,6 +279,7 @@
     cursor:pointer; font-family:'Space Mono',monospace; font-size:11.5px; font-weight:700;
     box-shadow: 3px 3px 0 var(--ink);
   }
+  .linklike{ background:none; border:none; padding:0; color:var(--turquoise-dark); font:inherit; font-weight:700; text-decoration:underline; cursor:pointer; }
   .field-hint{ font-size:11px; color:#8a7d55; margin-top:3px; }
   .place-search-results{ margin-top:8px; display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; }
   .place-search-result{
@@ -434,6 +435,48 @@
   </div>
 </div>
 
+<div class="overlay" id="share-choice-overlay">
+  <div class="modal" style="max-width:380px;">
+    <h2>Share this place</h2>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
+      <button class="btn-secondary btn-pill" style="width:100%;" onclick="closeShareChoice(); sharePlace(shareChoiceId);">📤 Post the card</button>
+      <div class="field-hint" style="text-transform:none; margin:-4px 0 4px 6px;">A picture card for Facebook, Threads, or Instagram.</div>
+      <button class="btn-secondary btn-pill" style="width:100%;" onclick="closeShareChoice(); sendToFriend(shareChoiceId);">🔗 Send to a friend</button>
+      <div class="field-hint" style="text-transform:none; margin:-4px 0 4px 6px;">A link they tap to add it to their own list.</div>
+    </div>
+    <div class="field-hint" id="share-choice-name" style="text-transform:none; margin-top:10px;"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeShareChoice()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="name-overlay">
+  <div class="modal" style="max-width:380px;">
+    <h2>Your name</h2>
+    <div class="field-hint" style="text-transform:none; margin-bottom:10px;">Friends will see "Recommended by" and this name when you send them a place.</div>
+    <input type="text" id="sender-name-input" placeholder="e.g. David" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault(); saveSenderName();}">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeNamePrompt()">Cancel</button>
+      <button class="btn-primary" onclick="saveSenderName()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="incoming-overlay">
+  <div class="modal" style="max-width:420px;">
+    <h2>Shared with you</h2>
+    <div id="incoming-body"></div>
+    <label>Add to trip</label>
+    <select id="incoming-trip"></select>
+    <div class="field-hint" id="incoming-trip-hint" style="text-transform:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeIncoming()">Not now</button>
+      <button class="btn-primary" onclick="addIncomingPlace()">Add to my list</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="data-overlay">
   <div class="modal" style="max-width:360px;">
     <h2>Export / Import</h2>
@@ -485,7 +528,7 @@ let photoRemoved = false;  // the open form's photo was removed
    IndexedDB on this device. The packaged iOS app will swap in a native,
    iCloud-synced implementation with the same methods; nothing else changes. */
 const store = (function(){
-  const DB_NAME = 'waypoints', DB_VERSION = 1;
+  const DB_NAME = 'waypoints', DB_VERSION = 2;
   let db = null;
 
   const reqP = (r) => new Promise((resolve, reject)=>{ r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
@@ -500,8 +543,8 @@ const store = (function(){
       const req = indexedDB.open(DB_NAME, DB_VERSION);
       req.onupgradeneeded = () => {
         const d = req.result;
-        ['trips', 'places', 'photos'].forEach(name => {
-          if(!d.objectStoreNames.contains(name)) d.createObjectStore(name, { keyPath: 'id' });
+        ['trips', 'places', 'photos', 'meta'].forEach(name => {
+          if(!d.objectStoreNames.contains(name)) d.createObjectStore(name, { keyPath: name === 'meta' ? 'key' : 'id' });
         });
       };
       req.onsuccess = () => resolve(req.result);
@@ -547,6 +590,12 @@ const store = (function(){
       await put('photos', { id, type: blob.type || 'image/jpeg', data });
     },
     deletePhoto: (id) => remove('photos', id),
+    async getSetting(key){
+      const t = db.transaction('meta', 'readonly');
+      const r = await reqP(t.objectStore('meta').get(key));
+      return r ? r.value : null;
+    },
+    putSetting: (key, value) => put('meta', { key, value }),
     async putMany(items){   // items: [{ store, value }]
       if(!items.length) return;
       const names = [...new Set(items.map(i => i.store))];
@@ -1401,7 +1450,7 @@ function cardHtml(p){
   const loc = locationQuery(p);
   return `
     <div class="card" onclick="editPlace('${p.id}')">
-      ${photoSrc(p) ? `<div class="photo" style="background-image:url('${escapeAttr(photoSrc(p))}')"></div>` : ''}
+      ${photoSrc(p) ? `<div class="photo" style="background-image:url('${escapeAttr(cssUrl(photoSrc(p)))}')"></div>` : ''}
       <div class="card-body">
         <div class="card-top">
           <div class="card-title">${escapeHtml(p.name)}</div>
@@ -1414,8 +1463,8 @@ function cardHtml(p){
         ${p.phone ? `<div class="addr"><a class="place-link" href="tel:${escapeAttr(p.phone.replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()">📞 ${escapeHtml(p.phone)}</a></div>` : ''}
         <div class="link-row">
           ${loc ? `<a class="place-link" href="${escapeAttr(mapUrl(p))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">🗺 Map</a>` : ''}
-          ${p.website ? `<a class="place-link" href="${escapeAttr(p.website)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">🔗 Website</a>` : ''}
-          ${p.social ? `<a class="place-link" href="${escapeAttr(p.social)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">📷 Social</a>` : ''}
+          ${safeHref(p.website) ? `<a class="place-link" href="${escapeAttr(safeHref(p.website))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">🔗 Website</a>` : ''}
+          ${safeHref(p.social) ? `<a class="place-link" href="${escapeAttr(safeHref(p.social))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">📷 Social</a>` : ''}
         </div>
         ${p.notes ? `<div class="notes">${escapeHtml(p.notes)}</div>` : ''}
         <div class="status-row">
@@ -1425,7 +1474,7 @@ function cardHtml(p){
               : `<span class="status-badge status-want">Want to go</span>`}
           </div>
           <div class="card-actions">
-            <button class="icon-btn" onclick="event.stopPropagation(); sharePlace('${p.id}')" title="Share this place">📤</button>
+            <button class="icon-btn" onclick="event.stopPropagation(); openShareChoice('${p.id}')" title="Share this place">📤</button>
             <button class="icon-btn" onclick="event.stopPropagation(); deletePlace('${p.id}')" title="Delete">✕</button>
           </div>
         </div>
@@ -1486,7 +1535,7 @@ function renderGrid(){
         <div class="city-meta">
           <span class="city-count">${groups[city].length} place${groups[city].length===1?'':'s'}</span>
           ${city!=='Unsorted' ? `<span class="weather-chip" data-loc="${escapeAttr(city)}">⋯</span>` : ''}
-          ${city!=='Unsorted' ? `<button class="city-map-btn" onclick="openCityMap('${escapeAttr(city)}')">🗺 View all</button>` : ''}
+          ${city!=='Unsorted' ? `<button class="city-map-btn" onclick="openCityMap('${jsArg(city)}')">🗺 View all</button>` : ''}
         </div>
       </div>
       <div class="city-scallop ${band}"></div>
@@ -1573,7 +1622,30 @@ function escapeHtml(s){
   d.textContent = s || '';
   return d.innerHTML;
 }
-function escapeAttr(s){ return (s||'').replace(/'/g,"%27"); }
+// For values placed inside a quoted HTML attribute.
+function escapeAttr(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+// For a value placed inside a single-quoted JavaScript string inside an onclick="…" attribute.
+function jsArg(s){
+  return escapeAttr(String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/\n/g, '\\n').replace(/\r/g, '\\r')
+    .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029'));
+}
+// For a URL placed inside url('…') in a style attribute.
+function cssUrl(u){
+  return String(u || '').replace(/['()"\\\s]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
+}
+// Only ever link to normal web addresses (never javascript: and friends).
+function safeHref(u){
+  try{
+    const x = new URL(String(u || '').trim());
+    return (x.protocol === 'http:' || x.protocol === 'https:') ? x.href : '';
+  }catch(e){ return ''; }
+}
 
 function setStatus(s){
   currentStatus = s;
@@ -1910,6 +1982,221 @@ function hideBanner(){
 }
 
 
+/* ---------- Send to a friend ----------
+   A shared place travels inside a link: everything after the "#" holds the place's
+   details, so nothing is ever sent to a server. Opening the link shows an
+   "Add this place?" screen; nothing is saved until the person taps Add. */
+
+// Where shared links point. Switch to https://hunterappstudio.com/waypoints/ once
+// Universal Links are set up, so a tapped link opens the installed app.
+const SHARE_LINK_BASE = 'https://davidhunterots-commits.github.io/waypoints-v1/';
+const SHARE_CATEGORIES = ['Restaurant', 'Coffee Shop', 'Hotel', 'Attraction', 'Other'];
+let senderName = '';
+let shareChoiceId = null;
+let pendingSendId = null;
+let incomingShare = null;
+
+function openShareChoice(id){
+  shareChoiceId = id;
+  renderShareChoiceName();
+  document.getElementById('share-choice-overlay').classList.add('open');
+}
+function closeShareChoice(){
+  document.getElementById('share-choice-overlay').classList.remove('open');
+}
+function renderShareChoiceName(){
+  const el = document.getElementById('share-choice-name');
+  el.innerHTML = senderName
+    ? `Links go out as <b>${escapeHtml(senderName)}</b> · <button type="button" class="linklike" onclick="askSenderName(null)">change</button>`
+    : '';
+}
+
+function askSenderName(thenSendId){
+  pendingSendId = thenSendId;
+  document.getElementById('sender-name-input').value = senderName;
+  document.getElementById('name-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('sender-name-input').focus(), 50);
+}
+function closeNamePrompt(){
+  document.getElementById('name-overlay').classList.remove('open');
+  pendingSendId = null;
+}
+async function saveSenderName(){
+  const v = clip(document.getElementById('sender-name-input').value, 60);
+  if(!v){ alert('Please enter a name your friends will recognize.'); return; }
+  try{ await store.putSetting('senderName', v); }catch(e){ storageError(e); return; }
+  senderName = v;
+  const sendId = pendingSendId;
+  closeNamePrompt();
+  renderShareChoiceName();
+  if(sendId) sendToFriend(sendId);
+}
+
+async function sendToFriend(id){
+  const p = places.find(x => x.id === id);
+  if(!p) return;
+  if(!senderName){ askSenderName(id); return; }
+  const link = buildShareLink(p);
+  const kind = (p.category === 'Other' && p.categoryOther) ? p.categoryOther : p.category;
+  const where = [kind, p.city].filter(Boolean).join(' in ');
+  const msg = `${senderName} recommends ${p.name}${where ? ' (' + where + ')' : ''}. Add it to your Waypoints list:`;
+  if(navigator.share){
+    try{ await navigator.share({ title: p.name, text: msg, url: link }); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; /* otherwise fall back to copying */ }
+  }
+  try{
+    await navigator.clipboard.writeText(msg + '\n' + link);
+    alert('Link copied — paste it into a message to send it.');
+  }catch(e){
+    alert(msg + '\n\n' + link);
+  }
+}
+
+/* --- building and reading links --- */
+
+// Trims, and removes control characters (keeps tabs and line breaks).
+function clip(s, n){
+  return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, n);
+}
+function toBase64Url(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function fromBase64Url(s){
+  const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b64 + '==='.slice((b64.length + 3) % 4));
+  const bytes = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function buildShareLink(p){
+  const payload = {
+    v: 1, n: p.name, c: p.category, co: p.categoryOther || '', ci: p.city || '', a: p.address || '',
+    ph: p.phone || '', w: p.website || '', s: p.social || '', pr: p.price || 0, no: p.notes || '', f: senderName
+  };
+  return SHARE_LINK_BASE + '#add=' + toBase64Url(JSON.stringify(payload));
+}
+function cleanWebUrl(u){
+  const s = clip(u, 500);
+  return s ? safeHref(s) : '';
+}
+// Links come from other people, so only known fields are accepted, lengths are capped,
+// and web addresses must be real http(s) addresses.
+function sanitizeSharedPlace(raw){
+  if(!raw || typeof raw !== 'object' || raw.v !== 1) return null;
+  const name = clip(raw.n, 120);
+  if(!name) return null;
+  return {
+    name,
+    category: SHARE_CATEGORIES.includes(raw.c) ? raw.c : 'Other',
+    categoryOther: clip(raw.co, 60),
+    city: clip(raw.ci, 80),
+    address: clip(raw.a, 200),
+    phone: clip(raw.ph, 40),
+    website: cleanWebUrl(raw.w),
+    social: cleanWebUrl(raw.s),
+    price: Math.max(0, Math.min(4, parseInt(raw.pr, 10) || 0)),
+    notes: clip(raw.no, 1000),
+    from: clip(raw.f, 60)
+  };
+}
+function parseShareUrl(urlString){
+  const s = String(urlString || '');
+  const i = s.indexOf('#add=');
+  if(i < 0) return { found: false, place: null };
+  try{
+    return { found: true, place: sanitizeSharedPlace(JSON.parse(fromBase64Url(s.slice(i + 5)))) };
+  }catch(e){
+    return { found: true, place: null };
+  }
+}
+
+/* --- receiving a shared place --- */
+
+function clearShareHash(){
+  if(location.hash.indexOf('#add=') === 0){
+    try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){ /* ignore */ }
+  }
+}
+function handleSharedUrl(urlString){
+  const r = parseShareUrl(urlString);
+  if(!r.found) return false;
+  clearShareHash();
+  if(!r.place){
+    alert("That link couldn't be read. Ask your friend to send it again.");
+    return true;
+  }
+  openIncoming(r.place);
+  return true;
+}
+function openIncoming(sh){
+  incomingShare = sh;
+  const norm = (s) => String(s || '').trim().toLowerCase();
+  const dup = places.find(p => norm(p.name) === norm(sh.name) && norm(p.address || p.city) === norm(sh.address || sh.city));
+  const where = [sh.address, sh.city].filter(Boolean).join(', ');
+  const kind = (sh.category === 'Other' && sh.categoryOther) ? sh.categoryOther : sh.category;
+  document.getElementById('incoming-body').innerHTML = `
+    <div class="card-title" style="font-size:22px; margin-bottom:6px;">${escapeHtml(sh.name)}</div>
+    <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <span class="cat-pill">${escapeHtml(kind)}</span>${sh.price ? priceHtml(sh.price) : ''}
+    </div>
+    ${sh.from ? `<div class="addr">🙋 Recommended by ${escapeHtml(sh.from)}</div>` : ''}
+    ${where ? `<div class="addr">📍 ${escapeHtml(where)}</div>` : ''}
+    ${sh.phone ? `<div class="addr">📞 ${escapeHtml(sh.phone)}</div>` : ''}
+    ${sh.website ? `<div class="addr">🔗 ${escapeHtml(sh.website)}</div>` : ''}
+    ${sh.notes ? `<div class="notes" style="margin-top:6px; white-space:pre-wrap;">${escapeHtml(sh.notes)}</div>` : ''}
+    ${dup ? `<div class="field-hint" style="text-transform:none; margin-top:8px;">Heads up: you already have a place with this name.</div>` : ''}`;
+  const sel = document.getElementById('incoming-trip');
+  const hint = document.getElementById('incoming-trip-hint');
+  if(trips.length){
+    sel.style.display = 'block';
+    sel.innerHTML = trips.map(t => `<option value="${escapeAttr(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+    sel.value = (currentTripId !== ALL_TRIPS_ID && trips.some(t => t.id === currentTripId)) ? currentTripId : trips[0].id;
+    hint.textContent = '';
+  } else {
+    sel.style.display = 'none';
+    sel.innerHTML = '';
+    hint.textContent = 'You don\u2019t have a trip yet, so this goes into a new trip called \u201CShared with me\u201D.';
+  }
+  document.getElementById('incoming-overlay').classList.add('open');
+}
+function closeIncoming(){
+  document.getElementById('incoming-overlay').classList.remove('open');
+  incomingShare = null;
+}
+async function addIncomingPlace(){
+  const sh = incomingShare;
+  if(!sh) return;
+  let tripId = trips.length ? document.getElementById('incoming-trip').value : '';
+  let newTrip = null;
+  if(!tripId){
+    newTrip = { id: 'trip-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: 'Shared with me', createdAt: Date.now() };
+    tripId = newTrip.id;
+  }
+  const place = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    tripId, name: sh.name, category: sh.category, categoryOther: sh.categoryOther,
+    city: sh.city, address: sh.address, phone: sh.phone, notes: sh.notes,
+    website: sh.website, social: sh.social, recommendedBy: sh.from,
+    status: 'want', rating: 0, price: sh.price, hasPhoto: false, photoUrl: '', createdAt: Date.now()
+  };
+  try{
+    if(newTrip) await store.putTrip(newTrip);
+    await store.putPlace(place);
+  }catch(e){ storageError(e); return; }
+  if(newTrip) trips.push(newTrip);
+  places.push(place);
+  currentTripId = tripId;
+  closeIncoming();
+  renderTripTabs();
+  renderTabs();
+  renderGrid();
+  showBanner('saving', 'Added \u201C' + place.name + '\u201D to your list.');
+  setTimeout(hideBanner, 3500);
+}
+
 async function init(){
   currentTripId = ALL_TRIPS_ID;
   try{
@@ -1918,6 +2205,7 @@ async function init(){
     trips = t.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     places = p;
     await loadAllPhotos();
+    senderName = (await store.getSetting('senderName')) || '';
   }catch(e){
     console.error('Storage failed to start', e);
     showBanner('error', "Couldn't open this device's storage, so your list can't be saved right now.");
@@ -1925,8 +2213,10 @@ async function init(){
   renderTripTabs();
   renderTabs();
   renderGrid();
+  handleSharedUrl(location.href);   // were we opened from a shared link?
 }
 
+window.addEventListener('hashchange', () => handleSharedUrl(location.href));
 init();
 </script>
 </body>
